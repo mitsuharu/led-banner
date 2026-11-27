@@ -30,7 +30,11 @@ function load() {
     const bm = s.bitmap;
     const valid = bm && Number.isInteger(bm.width) && bm.width > 0 && bm.width % 8 === 0
       && Array.isArray(bm.px) && bm.px.length === bm.width * ROWS;
-    if (!valid) s.bitmap = renderText(s);
+    // 選択肢にないフォント（以前の既定値など）は既定に戻す。画面の選択欄が空になり、何で描いたか分からなくなるため。
+    // 前の既定値はスマートフォンで汎用の等幅フォントに落ちて文字がかすれたので、ビットマップも描き直す
+    const fontChanged = ![...$('font').options].some((o) => o.value === s.font);
+    if (fontChanged) s.font = $('font').options[0].value;
+    if (!valid || fontChanged) s.bitmap = renderText(s);
     if (!COLORS[s.color]) s.color = 'red';
     s.brightness = [25, 50, 75, 100].includes(s.brightness) ? s.brightness : 100;
     if (![8, 12, 16].includes(s.dot)) s.dot = 12;
