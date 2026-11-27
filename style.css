@@ -1,0 +1,73 @@
+:root {
+  color-scheme: dark;
+  --bg:#111418; --card:#1b2027; --fg:#e8eaed; --mut:#9aa0a6; --acc:#ff5a3c; --line:#2c333c;
+  --input:#0d1014; --btn:#2a313b; --link:#8ab4f8;
+  --ok:#81c995; --err:#ff8a80;
+}
+/* ライトテーマ。LED のプレビューとドット編集は実物に近く見えるよう、どちらのテーマでも黒地のままにする。 */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg:#f4f5f7; --card:#ffffff; --fg:#1f2328; --mut:#5f6368; --acc:#e8452a; --line:#d0d7de;
+  --input:#ffffff; --btn:#f0f2f4; --link:#0969da;
+  --ok:#1a7f37; --err:#cf222e;
+}
+@media (prefers-color-scheme: light) {
+  :root[data-theme="auto"] {
+    color-scheme: light;
+    --bg:#f4f5f7; --card:#ffffff; --fg:#1f2328; --mut:#5f6368; --acc:#e8452a; --line:#d0d7de;
+    --input:#ffffff; --btn:#f0f2f4; --link:#0969da;
+    --ok:#1a7f37; --err:#cf222e;
+  }
+}
+* { box-sizing: border-box; }
+body { margin:0; background:var(--bg); color:var(--fg); font-family: system-ui, "Hiragino Sans", "Yu Gothic UI", "Meiryo", sans-serif; }
+header { padding: 20px 16px 4px; max-width: 960px; margin: 0 auto; display:flex; flex-wrap:wrap; gap: 8px 16px; align-items:flex-start; justify-content:space-between; }
+header > div { flex: 1 1 420px; }
+.theme { color: var(--mut); font-size: .85rem; }
+h1 { margin:0; font-size: 1.5rem; letter-spacing: .05em; }
+.sub { color: var(--mut); margin: 4px 0 0; font-size: .9rem; }
+main { max-width: 960px; margin: 0 auto; padding: 8px 16px 32px; }
+
+/* プレビューを主役にするため、カードではなく画面幅いっぱいの黒い舞台に置く */
+.stage { background:#000; border-radius: 14px; padding: 18px; margin: 14px 0; box-shadow: 0 6px 30px rgba(0,0,0,.35); }
+#preview { width: 100%; display:block; image-rendering: pixelated; }
+.stage .note { color:#9aa0a6; }
+.textline { margin-top: 14px; }
+.textline input { width: 100%; font-size: 1.25rem; padding: 10px 12px; background:#0d1014; color:#e8eaed; border-color:#2c333c; }
+
+.card { background: var(--card); border:1px solid var(--line); border-radius: 10px; padding: 14px 16px; margin: 14px 0; }
+.card h2 { margin: 0 0 10px; font-size: 1.05rem; }
+.card.small { font-size: .88rem; color: var(--mut); }
+.card a { color: var(--link); }
+.row { display:flex; flex-wrap:wrap; gap: 10px 16px; align-items:center; margin-top: 10px; }
+label { font-size: .9rem; display:inline-flex; flex-wrap:wrap; align-items:center; gap:6px; max-width:100%; }
+select { max-width: 100%; }
+label.full { display:flex; flex-direction:column; align-items:stretch; gap:4px; }
+input[type=text] { font-size: 1.05rem; padding: 6px 10px; border-radius:6px; border:1px solid var(--line); background:var(--input); color:var(--fg); }
+input[type=number] { width: 4.2em; }
+input, select, button { font: inherit; }
+select, input[type=number] { background:var(--input); color:var(--fg); border:1px solid var(--line); border-radius:6px; padding: 4px 6px; }
+button { background:var(--btn); color:var(--fg); border:1px solid var(--line); border-radius: 6px; padding: 6px 12px; cursor:pointer; }
+button:hover { border-color: var(--mut); }
+button.primary { background: var(--acc); border-color: var(--acc); color:#fff; font-weight: bold; padding: 8px 18px; }
+button:disabled { opacity: .5; cursor: default; }
+.note { color: var(--mut); font-size: .85rem; margin: 6px 0 0; }
+.status { color: var(--mut); font-size: .9rem; min-height: 1.3em; margin: 10px 0 0; }
+.status.ok { color: var(--ok); } .status.err { color: var(--err); }
+
+fieldset.colors { border: 0; padding: 0; margin: 0; display:flex; align-items:center; gap: 8px; }
+fieldset.colors legend { float:left; font-size: .9rem; margin-right: 6px; padding: 0; }
+.swatches { display:flex; flex-wrap:wrap; gap: 6px; }
+.swatches label { position: relative; }
+.swatches input { position:absolute; opacity:0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+.swatches span { display:block; width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--line); box-shadow: inset 0 0 0 3px #000; }
+.swatches input:checked + span { border-color: var(--fg); }
+.swatches input:focus-visible + span { outline: 2px solid var(--link); outline-offset: 2px; }
+
+.dotwrap { overflow-x:auto; background:#000; border-radius:6px; padding: 6px; margin-top: 8px; }
+#dots { display:block; cursor: crosshair; touch-action: none; }
+details { margin-top: 12px; }
+summary { cursor:pointer; color: var(--mut); }
+footer { text-align:center; padding: 10px 0 24px; font-size:.85rem; }
+footer a { color: var(--mut); }
+.visually-hidden { position:absolute; width:1px; height:1px; overflow:hidden; clip: rect(0 0 0 0); white-space:nowrap; }

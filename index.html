@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LEDバナー — 電光掲示板風のLEDプレビュー</title>
+<meta name="description" content="LEDネームバッジ風の電光掲示板を作って眺められます。">
+<link rel="stylesheet" href="style.css">
+<script>
+  // 描画前にテーマを決めて、読み込み時に一瞬ダークで表示されるのを防ぐ（app.js はモジュールで後から読まれるため、ここに置く）。
+  (() => {
+    let t = 'dark';
+    try { t = localStorage.getItem('ledbanner.theme'); } catch {}
+    document.documentElement.dataset.theme = ['dark', 'light', 'auto'].includes(t) ? t : 'dark';
+  })();
+</script>
+</head>
+<body>
+<header>
+  <div>
+    <h1>LEDバナー</h1>
+    <p class="sub">LEDネームバッジ風の電光掲示板を作って、眺められます。</p>
+  </div>
+  <label class="theme">テーマ
+    <select id="theme">
+      <option value="dark">ダーク</option>
+      <option value="light">ライト</option>
+      <option value="auto">OS に合わせる</option>
+    </select>
+  </label>
+</header>
+
+<main>
+  <section class="stage">
+    <canvas id="preview" width="720" height="192" aria-label="LEDバナーのプレビュー"></canvas>
+    <p id="previewNote" class="note" hidden>このモードの動きはおおよそのもので、実際のバッジとは速さや細部が異なります。</p>
+    <label class="full textline">
+      <span class="visually-hidden">文字列</span>
+      <input id="text" type="text" placeholder="表示する文字を入力（例: こんにちは HELLO）">
+    </label>
+  </section>
+
+  <section class="card">
+    <h2>表示</h2>
+    <div class="row">
+      <label>表示モード
+        <select id="mode">
+          <option value="0">← 左へスクロール</option>
+          <option value="1">→ 右へスクロール</option>
+          <option value="2">↑ 上へスクロール</option>
+          <option value="3">↓ 下へスクロール</option>
+          <option value="4">固定表示（中央）</option>
+          <option value="5">アニメーション（48ドットごとにコマ送り）</option>
+          <option value="6">降ってくる</option>
+          <option value="7">カーテン</option>
+          <option value="8">レーザー</option>
+        </select>
+      </label>
+      <label>速度 <input id="speed" type="range" min="1" max="8" value="4"><span id="speedv">4</span></label>
+      <label class="chk"><input id="blink" type="checkbox"> 点滅</label>
+      <label class="chk"><input id="ants" type="checkbox"> 枠アニメ</label>
+    </div>
+    <div class="row">
+      <fieldset class="colors">
+        <legend>色</legend>
+        <div id="colors" class="swatches"></div>
+      </fieldset>
+      <label>明るさ
+        <select id="brightness">
+          <option value="100">100%</option>
+          <option value="75">75%</option>
+          <option value="50">50%</option>
+          <option value="25">25%</option>
+        </select>
+      </label>
+    </div>
+    <details>
+      <summary>フォント設定</summary>
+      <div class="row">
+        <label>フォント
+          <select id="font">
+            <option value='"MS Gothic","Osaka-Mono","Noto Sans JP",monospace'>ゴシック（MS ゴシック等）</option>
+            <option value='"Yu Gothic","Hiragino Sans","Noto Sans JP",sans-serif'>游ゴシック/ヒラギノ</option>
+            <option value='"MS Mincho","Hiragino Mincho ProN","Noto Serif JP",serif'>明朝</option>
+            <option value='"Meiryo","Noto Sans JP",sans-serif'>メイリオ</option>
+            <option value="monospace">等幅（monospace）</option>
+            <option value="sans-serif">sans-serif</option>
+          </select>
+        </label>
+        <label>サイズ <input id="size" type="number" min="6" max="20" value="11"></label>
+        <label>上下位置 <input id="yoff" type="number" min="-6" max="6" value="0"></label>
+        <label>しきい値 <input id="threshold" type="range" min="10" max="240" value="110"></label>
+        <label class="chk"><input id="bold" type="checkbox"> 太字</label>
+        <label>字間 <input id="spacing" type="number" min="-2" max="6" value="0"></label>
+      </div>
+    </details>
+    <details>
+      <summary>ドット編集</summary>
+      <p class="note">クリック/ドラッグで点を反転します。文字列やフォントを変更すると作り直されます。</p>
+      <div class="dotwrap"><canvas id="dots"></canvas></div>
+      <div class="row">
+        <button id="addcols">+8列</button>
+        <button id="delcols">−8列</button>
+        <button id="clear">全消去</button>
+        <button id="invert">反転</button>
+        <button id="regen">文字から再生成</button>
+      </div>
+    </details>
+  </section>
+
+  <section class="card small">
+    <h2>このページについて</h2>
+    <ul>
+      <li><a href="https://github.com/mitsuharu/led-name-badge" target="_blank" rel="noopener">LEDネームバッジ 書き換えツール</a>のプレビュー部分を主役にしたスピンオフです。表示モードの動きは書き換えツールと同じです。</li>
+      <li>横 44 × 縦 11 ドットの <a href="https://www.shigezone.com/p/p916/" target="_blank" rel="noopener">LEDネームバッジ（Shigezone）</a>を模しています。</li>
+      <li>入力した文字や設定はこのブラウザ（localStorage）にだけ保存し、サーバーには送りません。</li>
+    </ul>
+  </section>
+</main>
+<footer><a href="https://github.com/mitsuharu/led-banner">Source on GitHub</a></footer>
+<script type="module" src="src/app.js"></script>
+</body>
+</html>
