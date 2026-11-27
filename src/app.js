@@ -1,7 +1,7 @@
 // 画面の操作・文字の描画・プレビュー・GIF の保存と共有。
 // 動きの計算は preview.js / animation.js、ドットの描画は raster.js、GIF のエンコードは gif.js に任せる。
 import { ROWS, BADGE_WIDTH as BADGE_W, ANIMATION_FRAME_WIDTH, APPROXIMATE_MODES, frameInterval, renderFrame, applyBlinkAndAnts } from './preview.js';
-import { COLORS, SHAPES, layout, palette, rasterize } from './raster.js';
+import { COLORS, layout, palette, rasterize } from './raster.js';
 import { EFFECT_TICK, buildFrames } from './animation.js';
 import { GifWriter } from './gif.js';
 import { composePostText, xIntentUrl } from './share.js';
@@ -15,7 +15,7 @@ const defaults = () => ({
   text: 'HELLO', mode: 0, speed: 4, blink: false, ants: false,
   font: $('font').options[0].value, size: 11, yoff: 0, threshold: 110, bold: false, spacing: 0,
   color: 'red', brightness: 100,
-  shape: 'wide', dot: 12, postText: '', postUseText: false,
+  dot: 12, postText: '', postUseText: false,
   bitmap: null, // { width, px: number[] } row-major, 1 = on
 });
 
@@ -33,7 +33,6 @@ function load() {
     if (!valid) s.bitmap = renderText(s);
     if (!COLORS[s.color]) s.color = 'red';
     s.brightness = [25, 50, 75, 100].includes(s.brightness) ? s.brightness : 100;
-    if (!SHAPES.includes(s.shape)) s.shape = 'wide';
     if (![8, 12, 16].includes(s.dot)) s.dot = 12;
     if (typeof s.postText !== 'string') s.postText = '';
     s.postUseText = s.postUseText === true;
@@ -72,11 +71,11 @@ function renderText(m) {
 }
 
 // ---------- form ----------
-const fields = ['text', 'mode', 'speed', 'blink', 'ants', 'font', 'size', 'yoff', 'threshold', 'bold', 'spacing', 'brightness', 'shape', 'dot', 'postText', 'postUseText'];
+const fields = ['text', 'mode', 'speed', 'blink', 'ants', 'font', 'size', 'yoff', 'threshold', 'bold', 'spacing', 'brightness', 'dot', 'postText', 'postUseText'];
 const renderFields = new Set(['text', 'font', 'size', 'yoff', 'threshold', 'bold', 'spacing']);
-const textFields = new Set(['text', 'font', 'shape', 'postText']);
+const textFields = new Set(['text', 'font', 'postText']);
 // プレビューの見た目に関係しない設定。変えても描き直さず、保存だけする
-const saveOnlyFields = new Set(['shape', 'dot', 'postText', 'postUseText']);
+const saveOnlyFields = new Set(['dot', 'postText', 'postUseText']);
 
 function buildSwatches() {
   const box = $('colors');
@@ -210,7 +209,7 @@ function restartPreview() {
 // Web Worker で作らないのは、共有（navigator.share）や新しいタブを開く処理が、クリックの直後（ユーザーの操作中）でないと
 // ブラウザに止められるため。作るのは数百ミリ秒〜1 秒ほどなので、同期で作る。
 function makeGif() {
-  const lay = layout({ dot: state.dot, shape: state.shape });
+  const lay = layout({ dot: state.dot });
   const frames = buildFrames(state);
   const writer = new GifWriter({ width: lay.width, height: lay.height, palette: palette(state.color, state.brightness) });
   for (const f of frames) writer.addFrame(rasterize(f.grid, lay), f.delay);

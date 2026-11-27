@@ -5,18 +5,12 @@ import { BG, OFF, ON, COLORS, layout, palette, rasterize } from '../src/raster.j
 
 const grid = (fn) => Uint8Array.from({ length: BADGE_WIDTH * ROWS }, (_, i) => (fn(i % BADGE_WIDTH, Math.floor(i / BADGE_WIDTH)) ? 1 : 0));
 
-test('バナーの形は 44×11 個の LED と、LED 半個分の余白の大きさになる', () => {
+test('画像は 44×11 個の LED と、周りの LED 1 個分の余白だけの大きさになる', () => {
   const lay = layout({ dot: 10 });
-  assert.equal(lay.width, 44 * 10 + 10);
-  assert.equal(lay.height, 11 * 10 + 10);
-  assert.equal(lay.left, 5);
-  assert.equal(lay.top, 5);
-});
-
-test('16:9 の形は横幅をそのままに高さを広げ、バナーを上下の中央に置く', () => {
-  const lay = layout({ dot: 12, shape: 'wide' });
-  assert.equal(lay.height, Math.round((lay.width * 9) / 16));
-  assert.ok(Math.abs(lay.top * 2 + ROWS * 12 - lay.height) <= 1);
+  assert.equal(lay.width, 44 * 10 + 20);
+  assert.equal(lay.height, 11 * 10 + 20);
+  assert.equal(lay.left, 10);
+  assert.equal(lay.top, 10);
 });
 
 test('LED の一辺は 2 ピクセル未満にしない', () => {
@@ -36,7 +30,7 @@ test('点灯している LED の中心は ON、消灯は OFF、LED の間と余�
 });
 
 test('使う色は背景・消灯・点灯の 3 色だけ', () => {
-  const img = rasterize(grid((x, y) => (x + y) % 3 === 0), layout({ dot: 9, shape: 'wide' }));
+  const img = rasterize(grid((x, y) => (x + y) % 3 === 0), layout({ dot: 9 }));
   assert.deepEqual([...new Set(img)].sort(), [BG, OFF, ON]);
 });
 

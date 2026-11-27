@@ -20,9 +20,6 @@ export const COLORS = Object.freeze({
   pink: { label: 'ピンク', rgb: [255, 90, 180] },
 });
 
-/** 画像の形。banner はバナーだけ、wide は X のタイムラインで切り取られにくい 16:9 にする（上下に余白）。 */
-export const SHAPES = Object.freeze(['banner', 'wide']);
-
 /**
  * パレット（[背景, 消灯, 点灯] の RGB）を作る。
  * @param {string} color COLORS のキー。知らない値は赤にする
@@ -41,17 +38,15 @@ export function palette(color, brightness = 100) {
 }
 
 /**
- * 画像の大きさとバナーの位置を決める。
- * @param {{ dot: number, shape?: string }} options dot は LED 1 個分の一辺（ピクセル）
+ * 画像の大きさとバナーの位置を決める。画像はドットのエリアと、その周りの余白だけにする。
+ * X のタイムライン向けに 16:9 へ広げることもできるが、上下の黒い余白が大きく見えるため採らない。
+ * @param {{ dot: number }} options dot は LED 1 個分の一辺（ピクセル）
  */
-export function layout({ dot, shape = 'banner' }) {
+export function layout({ dot }) {
   const d = Math.max(2, Math.trunc(dot) || 2);
-  // 外周に LED 半個分の余白を取り、ふちの LED が画像の端に接して見えないようにする
-  const margin = Math.ceil(d / 2);
-  const width = BADGE_WIDTH * d + margin * 2;
-  const bannerH = ROWS * d + margin * 2;
-  const height = shape === 'wide' ? Math.max(bannerH, Math.round((width * 9) / 16)) : bannerH;
-  return { dot: d, width, height, left: margin, top: Math.floor((height - ROWS * d) / 2) };
+  // 外周に LED 1 個分の余白を取る。半個分だとふちの LED が画像の端に詰まって見えるため
+  const margin = d;
+  return { dot: d, width: BADGE_WIDTH * d + margin * 2, height: ROWS * d + margin * 2, left: margin, top: margin };
 }
 
 // LED 1 個分の丸の形。true のピクセルを LED の色で塗る。
