@@ -4,6 +4,10 @@ LED ネームバッジ風の電光掲示板（LED バナー）を作って、ア
 
 **▶ https://mitsuharu.github.io/led-banner/**
 
+![「LEDバナージェネレーター」と流れる LED バナー](docs/led-banner.gif)
+
+このアプリで作った GIF です（左スクロール・赤・LED 中）。
+
 ## このアプリについて
 
 [LEDネームバッジ 書き換えツール（led-name-badge）](https://github.com/mitsuharu/led-name-badge) のスピンオフです。バッジへの書き込み部分を省き、プレビューを主役にしました。
