@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>LEDバナー — 電光掲示板風のアニメGIFを作る</title>
-<meta name="description" content="LEDネームバッジ風の電光掲示板を作って、アニメーションGIFとして保存できます。">
+<meta name="description" content="LEDネームバッジ風の電光掲示板を作って、アニメーションGIFとして保存したりXに投稿したりできます。">
 <link rel="stylesheet" href="style.css">
 <script>
   // 描画前にテーマを決めて、読み込み時に一瞬ダークで表示されるのを防ぐ（app.js はモジュールで後から読まれるため、ここに置く）。
@@ -19,7 +19,7 @@
 <header>
   <div>
     <h1>LEDバナー</h1>
-    <p class="sub">LEDネームバッジ風の電光掲示板を作って、アニメーションGIFとして保存できます。</p>
+    <p class="sub">LEDネームバッジ風の電光掲示板を作って、アニメーションGIFとして保存したり X に投稿したりできます。</p>
   </div>
   <label class="theme">テーマ
     <select id="theme">
@@ -109,11 +109,11 @@
   </section>
 
   <section class="card">
-    <h2>GIF に保存</h2>
+    <h2>GIF に保存・共有</h2>
     <div class="row">
       <label>形
         <select id="shape">
-          <option value="wide">16:9（上下に余白。SNS 向け）</option>
+          <option value="wide">16:9（上下に余白。X 向け）</option>
           <option value="banner">バナーのみ</option>
         </select>
       </label>
@@ -125,10 +125,16 @@
         </select>
       </label>
     </div>
+    <label class="full post">X に投稿する文
+      <input id="postText" type="text" placeholder="空なら、表示する文字列を使います">
+    </label>
     <div class="row">
       <button id="saveGif" class="primary">GIF を保存</button>
+      <button id="shareFile" hidden>共有…</button>
+      <button id="postX">X に投稿</button>
     </div>
     <p id="status" class="status" role="status"></p>
+    <p class="note">「X に投稿」は GIF を保存してから X の投稿画面を開きます。保存した GIF を投稿画面で添付してください。「共有…」が表示されるブラウザでは、共有先に X を選ぶと GIF を添付した状態で投稿できます。</p>
   </section>
 
   <section class="card small">
@@ -136,7 +142,7 @@
     <ul>
       <li><a href="https://github.com/mitsuharu/led-name-badge" target="_blank" rel="noopener">LEDネームバッジ 書き換えツール</a>のプレビュー部分を主役にしたスピンオフです。表示モードの動きは書き換えツールと同じです。</li>
       <li>横 44 × 縦 11 ドットの <a href="https://www.shigezone.com/p/p916/" target="_blank" rel="noopener">LEDネームバッジ（Shigezone）</a>を模しています。</li>
-      <li>入力した文字や設定はこのブラウザ（localStorage）にだけ保存し、サーバーには送りません。GIF もこのブラウザの中で作ります。</li>
+      <li>入力した文字や設定はこのブラウザ（localStorage）にだけ保存し、サーバーには送りません。GIF もこのブラウザの中で作ります。X に届くのは、共有先や X の画面で自分で投稿したときだけです。</li>
     </ul>
   </section>
 </main>
