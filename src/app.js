@@ -4,6 +4,7 @@ import { ROWS, BADGE_WIDTH as BADGE_W, ANIMATION_FRAME_WIDTH, APPROXIMATE_MODES,
 import { COLORS, SHAPES, layout, palette, rasterize } from './raster.js';
 import { EFFECT_TICK, buildFrames } from './animation.js';
 import { GifWriter } from './gif.js';
+import { composePostText, xIntentUrl } from './share.js';
 
 const STORE_KEY = 'ledbanner.v1';
 
@@ -14,7 +15,7 @@ const defaults = () => ({
   text: 'HELLO', mode: 0, speed: 4, blink: false, ants: false,
   font: $('font').options[0].value, size: 11, yoff: 0, threshold: 110, bold: false, spacing: 0,
   color: 'red', brightness: 100,
-  shape: 'wide', dot: 12, postText: '',
+  shape: 'wide', dot: 12, postText: '', postUseText: false,
   bitmap: null, // { width, px: number[] } row-major, 1 = on
 });
 
@@ -35,6 +36,7 @@ function load() {
     if (!SHAPES.includes(s.shape)) s.shape = 'wide';
     if (![8, 12, 16].includes(s.dot)) s.dot = 12;
     if (typeof s.postText !== 'string') s.postText = '';
+    s.postUseText = s.postUseText === true;
     return s;
   } catch {
     return null;
@@ -70,11 +72,11 @@ function renderText(m) {
 }
 
 // ---------- form ----------
-const fields = ['text', 'mode', 'speed', 'blink', 'ants', 'font', 'size', 'yoff', 'threshold', 'bold', 'spacing', 'brightness', 'shape', 'dot', 'postText'];
+const fields = ['text', 'mode', 'speed', 'blink', 'ants', 'font', 'size', 'yoff', 'threshold', 'bold', 'spacing', 'brightness', 'shape', 'dot', 'postText', 'postUseText'];
 const renderFields = new Set(['text', 'font', 'size', 'yoff', 'threshold', 'bold', 'spacing']);
 const textFields = new Set(['text', 'font', 'shape', 'postText']);
 // プレビューの見た目に関係しない設定。変えても描き直さず、保存だけする
-const saveOnlyFields = new Set(['shape', 'dot', 'postText']);
+const saveOnlyFields = new Set(['shape', 'dot', 'postText', 'postUseText']);
 
 function buildSwatches() {
   const box = $('colors');
@@ -258,9 +260,8 @@ $('saveGif').addEventListener('click', guarded(() => {
 // それを預かるサーバーが要り、「外部に送信しない・サーバーを持たない」方針に反するため採らない。
 // 代わりに、ファイルを共有できるブラウザでは共有シート（X のアプリを選べば GIF 付きで投稿画面になる）、
 // それ以外では GIF を保存してから投稿画面を開き、利用者に添付してもらう。
-const postText = () => state.postText.trim() || state.text.trim();
-// 多くのサイトの投稿ボタンと同じ intent/tweet を使う（intent/post より広く使われている）
-const intentUrl = () => `https://x.com/intent/tweet?text=${encodeURIComponent(postText())}`;
+const postText = () => composePostText(state);
+const intentUrl = () => xIntentUrl(postText());
 
 // ファイルを共有できるかは GIF の中身ではなく種類で決まるため、小さなダミーで確かめてボタンを出し分ける。
 const canShareGif = (() => {
