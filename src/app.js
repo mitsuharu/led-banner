@@ -241,7 +241,8 @@ function guarded(fn) {
   return async () => {
     try { await fn(); } catch (e) {
       console.error(e);
-      setStatus('エラー: ' + (e && e.message ? e.message : e), 'err');
+      // 原因を調べられるよう、エラーの種類（NotAllowedError など）も出す
+      setStatus(`エラー: ${e && e.name ? `${e.name}: ` : ''}${e && e.message ? e.message : e}`, 'err');
     }
   };
 }
@@ -258,7 +259,8 @@ $('saveGif').addEventListener('click', guarded(() => {
 // 代わりに、ファイルを共有できるブラウザでは共有シート（X のアプリを選べば GIF 付きで投稿画面になる）、
 // それ以外では GIF を保存してから投稿画面を開き、利用者に添付してもらう。
 const postText = () => state.postText.trim() || state.text.trim();
-const intentUrl = () => `https://x.com/intent/post?text=${encodeURIComponent(postText())}`;
+// 多くのサイトの投稿ボタンと同じ intent/tweet を使う（intent/post より広く使われている）
+const intentUrl = () => `https://x.com/intent/tweet?text=${encodeURIComponent(postText())}`;
 
 // ファイルを共有できるかは GIF の中身ではなく種類で決まるため、小さなダミーで確かめてボタンを出し分ける。
 const canShareGif = (() => {
@@ -276,24 +278,34 @@ $('shareFile').addEventListener('click', guarded(async () => {
     await navigator.share({ files: [gif.file], text: postText() });
     setStatus(`共有しました（${gif.summary}）`, 'ok');
   } catch (e) {
-    // 共有シートを閉じただけのときはエラーにしない
-    if (e && e.name === 'AbortError') { setStatus(''); return; }
+    // 共有先のアプリで失敗したときも AbortError が返るブラウザがあるため、閉じただけと決めつけてメッセージを消さない
+    if (e && e.name === 'AbortError') {
+      setStatus('共有は完了しませんでした（取り消したか、共有先でエラーになった可能性があります）。うまくいかないときは「X に投稿」を使ってください。');
+      return;
+    }
     throw e;
   }
 }));
 
-$('postX').addEventListener('click', guarded(() => {
-  const gif = makeGif();
-  download(gif.file);
-  // noopener を付けると戻り値が常に null になり、ポップアップが止められたかを確かめられないため、opener は後で切る
-  const win = window.open(intentUrl(), '_blank');
-  if (win) {
-    win.opener = null;
+// 「X に投稿」は window.open ではなく普通のリンクにする。
+// スクリプトで開くタブは、広告ブロッカーのポップアップ対策に止められることがあるため（他のサイトの投稿ボタンと同じ形にする）。
+// クリックでは GIF の保存だけをし、タブはリンクの既定の動作で開く。
+const postLink = $('postX');
+postLink.addEventListener('pointerdown', () => { postLink.href = intentUrl(); });
+postLink.addEventListener('focus', () => { postLink.href = intentUrl(); });
+postLink.addEventListener('click', (e) => {
+  postLink.href = intentUrl();
+  try {
+    const gif = makeGif();
+    download(gif.file);
     setStatus(`GIF を保存しました（${gif.summary}）。開いた X の投稿画面で、保存した GIF（${gif.file.name}）を添付してください。`, 'ok');
-  } else {
-    setStatus('GIF を保存しました。X の投稿画面を開けませんでした（ポップアップがブロックされた可能性があります）。', 'err');
+  } catch (err) {
+    // GIF が作れないまま投稿画面だけ開くと、添付するものがなく戸惑うため、開かずにエラーを出す
+    e.preventDefault();
+    console.error(err);
+    setStatus('エラー: ' + (err && err.message ? err.message : err), 'err');
   }
-}));
+});
 
 // テーマはバナーの設定とは別に保存する（state の検証に含めず、壊れても初期値に戻すだけで済むように）。
 const THEME_KEY = 'ledbanner.theme';

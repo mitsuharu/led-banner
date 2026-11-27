@@ -47,8 +47,9 @@ input[type=text] { font-size: 1.05rem; padding: 6px 10px; border-radius:6px; bor
 input[type=number] { width: 4.2em; }
 input, select, button { font: inherit; }
 select, input[type=number] { background:var(--input); color:var(--fg); border:1px solid var(--line); border-radius:6px; padding: 4px 6px; }
-button { background:var(--btn); color:var(--fg); border:1px solid var(--line); border-radius: 6px; padding: 6px 12px; cursor:pointer; }
-button:hover { border-color: var(--mut); }
+button, a.button { background:var(--btn); color:var(--fg); border:1px solid var(--line); border-radius: 6px; padding: 6px 12px; cursor:pointer; }
+button:hover, a.button:hover { border-color: var(--mut); }
+a.button { display:inline-block; text-decoration:none; line-height: normal; }
 button.primary { background: var(--acc); border-color: var(--acc); color:#fff; font-weight: bold; padding: 8px 18px; }
 button:disabled { opacity: .5; cursor: default; }
 .note { color: var(--mut); font-size: .85rem; margin: 6px 0 0; }
