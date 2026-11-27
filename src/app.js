@@ -99,6 +99,7 @@ function loadForm() {
     if (el.type === 'checkbox') el.checked = !!state[f]; else el.value = state[f];
   });
   $('speedv').textContent = state.speed;
+  $('thresholdv').textContent = state.threshold;
   const radio = document.querySelector(`input[name="color"][value="${state.color}"]`);
   if (radio) radio.checked = true;
 }
@@ -108,6 +109,7 @@ fields.forEach((f) => {
   el.addEventListener('input', () => {
     state[f] = el.type === 'checkbox' ? el.checked : textFields.has(f) ? el.value : Number(el.value);
     if (f === 'speed') $('speedv').textContent = state.speed;
+    if (f === 'threshold') $('thresholdv').textContent = state.threshold;
     if (renderFields.has(f)) state.bitmap = renderText(state);
     if (saveOnlyFields.has(f)) save(); else changed();
   });
@@ -184,25 +186,54 @@ function drawFrame(grid) {
   }
   pvCtx.putImageData(pvImage, 0, 0);
 }
-function restartPreview() {
+// 一時停止中は、止めた時刻の画面を設定が変わるたびに描き直す（止めたまま、しきい値やフォントの見え方を確かめられるように）。
+let start = 0, paused = false, pausedAt = 0;
+
+function drawAt(elapsed, m) {
+  const interval = frameInterval(m.mode, m.speed);
+  const frame = Math.floor(elapsed / interval), tick = Math.floor(elapsed / EFFECT_TICK);
+  // 止めているときは点滅を外す。点滅で消えている瞬間に止めると、真っ暗なまま調整することになるため
+  const effects = paused ? { ...m, blink: false } : m;
+  drawFrame(applyBlinkAndAnts(renderFrame(m.bitmap, m.mode, frame), effects, tick));
+}
+
+/**
+ * プレビューを動かし直す。
+ * @param {number} from 始める時刻（ミリ秒）。設定を変えたときは 0 から、再開のときは止めた時刻から
+ */
+function restartPreview(from = 0) {
   clearInterval(timer);
   const m = state;
   $('previewNote').hidden = !APPROXIMATE_MODES.has(Number(m.mode));
+  if (paused) { drawAt(pausedAt, m); return; }
   // 点滅と枠アニメはモードの速さに連動させず、EFFECT_TICK ごとに進める（led-name-badge と同じ）。
-  const interval = frameInterval(m.mode, m.speed), start = performance.now();
+  const interval = frameInterval(m.mode, m.speed);
+  start = performance.now() - from;
   let last = '';
   const step = () => {
     const elapsed = performance.now() - start;
-    const frame = Math.floor(elapsed / interval), tick = Math.floor(elapsed / EFFECT_TICK);
     // 画面が変わらないときは描き直さない（rasterize は 1 コマで数万ピクセルを塗るため）
-    const key = `${frame}:${tick}`;
+    const key = `${Math.floor(elapsed / interval)}:${Math.floor(elapsed / EFFECT_TICK)}`;
     if (key === last) return;
     last = key;
-    drawFrame(applyBlinkAndAnts(renderFrame(m.bitmap, m.mode, frame), m, tick));
+    drawAt(elapsed, m);
   };
   step();
   timer = setInterval(step, Math.min(interval, EFFECT_TICK));
 }
+
+const pauseButton = $('pause');
+pauseButton.addEventListener('click', () => {
+  paused = !paused;
+  pauseButton.setAttribute('aria-pressed', String(paused));
+  pauseButton.textContent = paused ? '▶ 再生' : '⏸ 一時停止';
+  if (paused) {
+    pausedAt = performance.now() - start;
+    restartPreview();
+  } else {
+    restartPreview(pausedAt);
+  }
+});
 
 // ---------- GIF ----------
 // GIF はプレビューと同じ raster.js で描き、コマは animation.js がプレビューと同じ時刻の画面を作る。
