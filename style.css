@@ -32,6 +32,12 @@ main { max-width: 960px; margin: 0 auto; padding: 8px 16px 32px; }
 .stage { background:#000; border-radius: 14px; padding: 18px; margin: 14px 0; box-shadow: 0 6px 30px rgba(0,0,0,.35); }
 #preview { width: 100%; display:block; image-rendering: pixelated; }
 .stage .note { color:#9aa0a6; }
+/* 舞台は黒地なので、テーマに関係なく暗い色のボタンにする */
+.stagebar { display:flex; justify-content:flex-end; margin-top: 10px; }
+.stagebar button { background:#1b2027; color:#e8eaed; border-color:#2c333c; }
+.stagebar button[aria-pressed="true"] { border-color:#9aa0a6; }
+.hint { color: var(--mut); }
+#speedv, #thresholdv { min-width: 2em; font-variant-numeric: tabular-nums; }
 .textline { margin-top: 14px; }
 .textline input { width: 100%; font-size: 1.25rem; padding: 10px 12px; background:#0d1014; color:#e8eaed; border-color:#2c333c; }
 

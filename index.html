@@ -33,6 +33,9 @@
 <main>
   <section class="stage">
     <canvas id="preview" width="720" height="192" aria-label="LEDバナーのプレビュー"></canvas>
+    <div class="stagebar">
+      <button id="pause" type="button" aria-pressed="false">⏸ 一時停止</button>
+    </div>
     <p id="previewNote" class="note" hidden>このモードの動きはおおよそのもので、実際のバッジとは速さや細部が異なります。</p>
     <label class="full textline">
       <span class="visually-hidden">文字列</span>
@@ -89,7 +92,7 @@
         </label>
         <label>サイズ <input id="size" type="number" min="6" max="20" value="11"></label>
         <label>上下位置 <input id="yoff" type="number" min="-6" max="6" value="0"></label>
-        <label>しきい値 <input id="threshold" type="range" min="10" max="240" value="110"></label>
+        <label>しきい値 <input id="threshold" type="range" min="10" max="240" value="110"><span id="thresholdv">110</span><small class="hint">（小さいほど太く）</small></label>
         <label class="chk"><input id="bold" type="checkbox"> 太字</label>
         <label>字間 <input id="spacing" type="number" min="-2" max="6" value="0"></label>
       </div>
