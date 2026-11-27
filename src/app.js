@@ -1,4 +1,4 @@
-// 画面の操作・文字の描画・プレビュー・GIF の保存。
+// 画面の操作・文字の描画・プレビュー・GIF の保存と共有。
 // 動きの計算は preview.js / animation.js、ドットの描画は raster.js、GIF のエンコードは gif.js に任せる。
 import { ROWS, BADGE_WIDTH as BADGE_W, ANIMATION_FRAME_WIDTH, APPROXIMATE_MODES, frameInterval, renderFrame, applyBlinkAndAnts } from './preview.js';
 import { COLORS, SHAPES, layout, palette, rasterize } from './raster.js';
@@ -14,7 +14,7 @@ const defaults = () => ({
   text: 'HELLO', mode: 0, speed: 4, blink: false, ants: false,
   font: $('font').options[0].value, size: 11, yoff: 0, threshold: 110, bold: false, spacing: 0,
   color: 'red', brightness: 100,
-  shape: 'wide', dot: 12,
+  shape: 'wide', dot: 12, postText: '',
   bitmap: null, // { width, px: number[] } row-major, 1 = on
 });
 
@@ -34,6 +34,7 @@ function load() {
     s.brightness = [25, 50, 75, 100].includes(s.brightness) ? s.brightness : 100;
     if (!SHAPES.includes(s.shape)) s.shape = 'wide';
     if (![8, 12, 16].includes(s.dot)) s.dot = 12;
+    if (typeof s.postText !== 'string') s.postText = '';
     return s;
   } catch {
     return null;
@@ -69,11 +70,11 @@ function renderText(m) {
 }
 
 // ---------- form ----------
-const fields = ['text', 'mode', 'speed', 'blink', 'ants', 'font', 'size', 'yoff', 'threshold', 'bold', 'spacing', 'brightness', 'shape', 'dot'];
+const fields = ['text', 'mode', 'speed', 'blink', 'ants', 'font', 'size', 'yoff', 'threshold', 'bold', 'spacing', 'brightness', 'shape', 'dot', 'postText'];
 const renderFields = new Set(['text', 'font', 'size', 'yoff', 'threshold', 'bold', 'spacing']);
-const textFields = new Set(['text', 'font', 'shape']);
+const textFields = new Set(['text', 'font', 'shape', 'postText']);
 // プレビューの見た目に関係しない設定。変えても描き直さず、保存だけする
-const saveOnlyFields = new Set(['shape', 'dot']);
+const saveOnlyFields = new Set(['shape', 'dot', 'postText']);
 
 function buildSwatches() {
   const box = $('colors');
@@ -204,8 +205,8 @@ function restartPreview() {
 
 // ---------- GIF ----------
 // GIF はプレビューと同じ raster.js で描き、コマは animation.js がプレビューと同じ時刻の画面を作る。
-// 作るのは数百ミリ秒〜1 秒ほどなので、Web Worker は使わず同期で作る
-// （この後に加える共有の処理が、クリックの直後（ユーザーの操作中）でないとブラウザに止められるため）。
+// Web Worker で作らないのは、共有（navigator.share）や新しいタブを開く処理が、クリックの直後（ユーザーの操作中）でないと
+// ブラウザに止められるため。作るのは数百ミリ秒〜1 秒ほどなので、同期で作る。
 function makeGif() {
   const lay = layout({ dot: state.dot, shape: state.shape });
   const frames = buildFrames(state);
@@ -249,6 +250,49 @@ $('saveGif').addEventListener('click', guarded(() => {
   const gif = makeGif();
   download(gif.file);
   setStatus(`GIF を保存しました（${gif.summary}）`, 'ok');
+}));
+
+// ---------- X / 共有 ----------
+// X の投稿画面の URL（Web Intent）では画像を渡せない。API で直接投稿するには、利用者の X アカウントの認可と
+// それを預かるサーバーが要り、「外部に送信しない・サーバーを持たない」方針に反するため採らない。
+// 代わりに、ファイルを共有できるブラウザでは共有シート（X のアプリを選べば GIF 付きで投稿画面になる）、
+// それ以外では GIF を保存してから投稿画面を開き、利用者に添付してもらう。
+const postText = () => state.postText.trim() || state.text.trim();
+const intentUrl = () => `https://x.com/intent/post?text=${encodeURIComponent(postText())}`;
+
+// ファイルを共有できるかは GIF の中身ではなく種類で決まるため、小さなダミーで確かめてボタンを出し分ける。
+const canShareGif = (() => {
+  try {
+    return !!navigator.canShare && navigator.canShare({ files: [new File([new Uint8Array(1)], 'a.gif', { type: 'image/gif' })] });
+  } catch {
+    return false;
+  }
+})();
+$('shareFile').hidden = !canShareGif;
+
+$('shareFile').addEventListener('click', guarded(async () => {
+  const gif = makeGif();
+  try {
+    await navigator.share({ files: [gif.file], text: postText() });
+    setStatus(`共有しました（${gif.summary}）`, 'ok');
+  } catch (e) {
+    // 共有シートを閉じただけのときはエラーにしない
+    if (e && e.name === 'AbortError') { setStatus(''); return; }
+    throw e;
+  }
+}));
+
+$('postX').addEventListener('click', guarded(() => {
+  const gif = makeGif();
+  download(gif.file);
+  // noopener を付けると戻り値が常に null になり、ポップアップが止められたかを確かめられないため、opener は後で切る
+  const win = window.open(intentUrl(), '_blank');
+  if (win) {
+    win.opener = null;
+    setStatus(`GIF を保存しました（${gif.summary}）。開いた X の投稿画面で、保存した GIF（${gif.file.name}）を添付してください。`, 'ok');
+  } else {
+    setStatus('GIF を保存しました。X の投稿画面を開けませんでした（ポップアップがブロックされた可能性があります）。', 'err');
+  }
 }));
 
 // テーマはバナーの設定とは別に保存する（state の検証に含めず、壊れても初期値に戻すだけで済むように）。

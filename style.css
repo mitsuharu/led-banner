@@ -64,6 +64,8 @@ fieldset.colors legend { float:left; font-size: .9rem; margin-right: 6px; paddin
 .swatches input:checked + span { border-color: var(--fg); }
 .swatches input:focus-visible + span { outline: 2px solid var(--link); outline-offset: 2px; }
 
+label.post { margin-top: 12px; }
+label.post input { width: 100%; }
 .dotwrap { overflow-x:auto; background:#000; border-radius:6px; padding: 6px; margin-top: 8px; }
 #dots { display:block; cursor: crosshair; touch-action: none; }
 details { margin-top: 12px; }
