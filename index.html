@@ -126,12 +126,15 @@
       </label>
     </div>
     <label class="full post">X に投稿する文
-      <input id="postText" type="text" placeholder="空なら、表示する文字列を使います">
+      <input id="postText" type="text" placeholder="自由に入力（空でも投稿できます）">
     </label>
+    <div class="row">
+      <label class="chk"><input id="postUseText" type="checkbox"> 表示する文字列を投稿する文に入れる</label>
+    </div>
     <div class="row">
       <button id="saveGif" class="primary">GIF を保存</button>
       <button id="shareFile" hidden>共有…</button>
-      <button id="postX">X に投稿</button>
+      <a id="postX" class="button" href="https://x.com/intent/tweet" target="_blank" rel="noopener">X に投稿</a>
     </div>
     <p id="status" class="status" role="status"></p>
     <p class="note">「X に投稿」は GIF を保存してから X の投稿画面を開きます。保存した GIF を投稿画面で添付してください。「共有…」が表示されるブラウザでは、共有先に X を選ぶと GIF を添付した状態で投稿できます。</p>

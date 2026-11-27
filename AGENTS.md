@@ -14,7 +14,7 @@
    - npm の依存（`dependencies` / `devDependencies`）を追加しない。テストも Node.js 標準の `node:test` / `node:assert` で書く。
    - CDN からのスクリプト・Web フォントの読み込みもしない（オフラインでも動き、外部へ通信しないため）。
 2. **ビルド工程を持たない**。リポジトリのファイルをそのまま GitHub Pages で配信できること。
-3. **動きの計算・ドットの描画・GIF のエンコードは DOM に依存しないモジュールに分ける**（`src/preview.js`, `src/raster.js`, `src/animation.js`, `src/gif.js`）。Node.js でテストできるようにする。
+3. **動きの計算・ドットの描画・GIF のエンコード・投稿する文の組み立ては DOM に依存しないモジュールに分ける**（`src/preview.js`, `src/raster.js`, `src/animation.js`, `src/gif.js`, `src/share.js`）。Node.js でテストできるようにする。
 4. **対応ブラウザ**: 最新のデスクトップ版・スマートフォン版の主要ブラウザ（Chrome / Edge / Safari / Firefox）。Web Share API でのファイル共有に対応しないブラウザでは、GIF を保存してから X の投稿画面を開く方法に切り替える。
 5. ユーザーの入力はブラウザ内（localStorage）にだけ保存し、アプリが自動で外部に送信することはしない。外部に出るのは、ユーザーが「X に投稿」を押して、共有先や投稿画面で自分で送信したときだけにする。
 

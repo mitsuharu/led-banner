@@ -4,6 +4,7 @@ import { ROWS, BADGE_WIDTH as BADGE_W, ANIMATION_FRAME_WIDTH, APPROXIMATE_MODES,
 import { COLORS, SHAPES, layout, palette, rasterize } from './raster.js';
 import { EFFECT_TICK, buildFrames } from './animation.js';
 import { GifWriter } from './gif.js';
+import { composePostText, xIntentUrl } from './share.js';
 
 const STORE_KEY = 'ledbanner.v1';
 
@@ -14,7 +15,7 @@ const defaults = () => ({
   text: 'HELLO', mode: 0, speed: 4, blink: false, ants: false,
   font: $('font').options[0].value, size: 11, yoff: 0, threshold: 110, bold: false, spacing: 0,
   color: 'red', brightness: 100,
-  shape: 'wide', dot: 12, postText: '',
+  shape: 'wide', dot: 12, postText: '', postUseText: false,
   bitmap: null, // { width, px: number[] } row-major, 1 = on
 });
 
@@ -35,6 +36,7 @@ function load() {
     if (!SHAPES.includes(s.shape)) s.shape = 'wide';
     if (![8, 12, 16].includes(s.dot)) s.dot = 12;
     if (typeof s.postText !== 'string') s.postText = '';
+    s.postUseText = s.postUseText === true;
     return s;
   } catch {
     return null;
@@ -70,11 +72,11 @@ function renderText(m) {
 }
 
 // ---------- form ----------
-const fields = ['text', 'mode', 'speed', 'blink', 'ants', 'font', 'size', 'yoff', 'threshold', 'bold', 'spacing', 'brightness', 'shape', 'dot', 'postText'];
+const fields = ['text', 'mode', 'speed', 'blink', 'ants', 'font', 'size', 'yoff', 'threshold', 'bold', 'spacing', 'brightness', 'shape', 'dot', 'postText', 'postUseText'];
 const renderFields = new Set(['text', 'font', 'size', 'yoff', 'threshold', 'bold', 'spacing']);
 const textFields = new Set(['text', 'font', 'shape', 'postText']);
 // プレビューの見た目に関係しない設定。変えても描き直さず、保存だけする
-const saveOnlyFields = new Set(['shape', 'dot', 'postText']);
+const saveOnlyFields = new Set(['shape', 'dot', 'postText', 'postUseText']);
 
 function buildSwatches() {
   const box = $('colors');
@@ -241,7 +243,8 @@ function guarded(fn) {
   return async () => {
     try { await fn(); } catch (e) {
       console.error(e);
-      setStatus('エラー: ' + (e && e.message ? e.message : e), 'err');
+      // 原因を調べられるよう、エラーの種類（NotAllowedError など）も出す
+      setStatus(`エラー: ${e && e.name ? `${e.name}: ` : ''}${e && e.message ? e.message : e}`, 'err');
     }
   };
 }
@@ -257,8 +260,8 @@ $('saveGif').addEventListener('click', guarded(() => {
 // それを預かるサーバーが要り、「外部に送信しない・サーバーを持たない」方針に反するため採らない。
 // 代わりに、ファイルを共有できるブラウザでは共有シート（X のアプリを選べば GIF 付きで投稿画面になる）、
 // それ以外では GIF を保存してから投稿画面を開き、利用者に添付してもらう。
-const postText = () => state.postText.trim() || state.text.trim();
-const intentUrl = () => `https://x.com/intent/post?text=${encodeURIComponent(postText())}`;
+const postText = () => composePostText(state);
+const intentUrl = () => xIntentUrl(postText());
 
 // ファイルを共有できるかは GIF の中身ではなく種類で決まるため、小さなダミーで確かめてボタンを出し分ける。
 const canShareGif = (() => {
@@ -276,24 +279,34 @@ $('shareFile').addEventListener('click', guarded(async () => {
     await navigator.share({ files: [gif.file], text: postText() });
     setStatus(`共有しました（${gif.summary}）`, 'ok');
   } catch (e) {
-    // 共有シートを閉じただけのときはエラーにしない
-    if (e && e.name === 'AbortError') { setStatus(''); return; }
+    // 共有先のアプリで失敗したときも AbortError が返るブラウザがあるため、閉じただけと決めつけてメッセージを消さない
+    if (e && e.name === 'AbortError') {
+      setStatus('共有は完了しませんでした（取り消したか、共有先でエラーになった可能性があります）。うまくいかないときは「X に投稿」を使ってください。');
+      return;
+    }
     throw e;
   }
 }));
 
-$('postX').addEventListener('click', guarded(() => {
-  const gif = makeGif();
-  download(gif.file);
-  // noopener を付けると戻り値が常に null になり、ポップアップが止められたかを確かめられないため、opener は後で切る
-  const win = window.open(intentUrl(), '_blank');
-  if (win) {
-    win.opener = null;
+// 「X に投稿」は window.open ではなく普通のリンクにする。
+// スクリプトで開くタブは、広告ブロッカーのポップアップ対策に止められることがあるため（他のサイトの投稿ボタンと同じ形にする）。
+// クリックでは GIF の保存だけをし、タブはリンクの既定の動作で開く。
+const postLink = $('postX');
+postLink.addEventListener('pointerdown', () => { postLink.href = intentUrl(); });
+postLink.addEventListener('focus', () => { postLink.href = intentUrl(); });
+postLink.addEventListener('click', (e) => {
+  postLink.href = intentUrl();
+  try {
+    const gif = makeGif();
+    download(gif.file);
     setStatus(`GIF を保存しました（${gif.summary}）。開いた X の投稿画面で、保存した GIF（${gif.file.name}）を添付してください。`, 'ok');
-  } else {
-    setStatus('GIF を保存しました。X の投稿画面を開けませんでした（ポップアップがブロックされた可能性があります）。', 'err');
+  } catch (err) {
+    // GIF が作れないまま投稿画面だけ開くと、添付するものがなく戸惑うため、開かずにエラーを出す
+    e.preventDefault();
+    console.error(err);
+    setStatus('エラー: ' + (err && err.message ? err.message : err), 'err');
   }
-}));
+});
 
 // テーマはバナーの設定とは別に保存する（state の検証に含めず、壊れても初期値に戻すだけで済むように）。
 const THEME_KEY = 'ledbanner.theme';
