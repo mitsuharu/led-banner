@@ -1,0 +1,10 @@
+{
+  "name": "led-banner",
+  "private": true,
+  "type": "module",
+  "description": "LED name badge style banner preview and animated GIF maker",
+  "license": "MIT",
+  "scripts": {
+    "test": "node --test"
+  }
+}
