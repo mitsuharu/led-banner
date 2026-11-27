@@ -1,6 +1,9 @@
-// 画面の操作・文字の描画・プレビュー。動きの計算は preview.js、ドットの描画は raster.js に任せる。
+// 画面の操作・文字の描画・プレビュー・GIF の保存。
+// 動きの計算は preview.js / animation.js、ドットの描画は raster.js、GIF のエンコードは gif.js に任せる。
 import { ROWS, BADGE_WIDTH as BADGE_W, ANIMATION_FRAME_WIDTH, APPROXIMATE_MODES, frameInterval, renderFrame, applyBlinkAndAnts } from './preview.js';
-import { COLORS, layout, palette, rasterize } from './raster.js';
+import { COLORS, SHAPES, layout, palette, rasterize } from './raster.js';
+import { EFFECT_TICK, buildFrames } from './animation.js';
+import { GifWriter } from './gif.js';
 
 const STORE_KEY = 'ledbanner.v1';
 
@@ -11,6 +14,7 @@ const defaults = () => ({
   text: 'HELLO', mode: 0, speed: 4, blink: false, ants: false,
   font: $('font').options[0].value, size: 11, yoff: 0, threshold: 110, bold: false, spacing: 0,
   color: 'red', brightness: 100,
+  shape: 'wide', dot: 12,
   bitmap: null, // { width, px: number[] } row-major, 1 = on
 });
 
@@ -28,6 +32,8 @@ function load() {
     if (!valid) s.bitmap = renderText(s);
     if (!COLORS[s.color]) s.color = 'red';
     s.brightness = [25, 50, 75, 100].includes(s.brightness) ? s.brightness : 100;
+    if (!SHAPES.includes(s.shape)) s.shape = 'wide';
+    if (![8, 12, 16].includes(s.dot)) s.dot = 12;
     return s;
   } catch {
     return null;
@@ -63,9 +69,11 @@ function renderText(m) {
 }
 
 // ---------- form ----------
-const fields = ['text', 'mode', 'speed', 'blink', 'ants', 'font', 'size', 'yoff', 'threshold', 'bold', 'spacing', 'brightness'];
+const fields = ['text', 'mode', 'speed', 'blink', 'ants', 'font', 'size', 'yoff', 'threshold', 'bold', 'spacing', 'brightness', 'shape', 'dot'];
 const renderFields = new Set(['text', 'font', 'size', 'yoff', 'threshold', 'bold', 'spacing']);
-const textFields = new Set(['text', 'font']);
+const textFields = new Set(['text', 'font', 'shape']);
+// プレビューの見た目に関係しない設定。変えても描き直さず、保存だけする
+const saveOnlyFields = new Set(['shape', 'dot']);
 
 function buildSwatches() {
   const box = $('colors');
@@ -99,7 +107,7 @@ fields.forEach((f) => {
     state[f] = el.type === 'checkbox' ? el.checked : textFields.has(f) ? el.value : Number(el.value);
     if (f === 'speed') $('speedv').textContent = state.speed;
     if (renderFields.has(f)) state.bitmap = renderText(state);
-    changed();
+    if (saveOnlyFields.has(f)) save(); else changed();
   });
 });
 
@@ -157,14 +165,12 @@ dots.addEventListener('pointermove', (e) => { if (e.buttons) setDot(e); });
 dots.addEventListener('pointerup', () => { paint = null; restartPreview(); save(); });
 
 // ---------- preview ----------
-// raster.js で描く（後で加える GIF の保存でも同じ関数を使い、画面と GIF の見た目を一致させるため）。
+// GIF と同じ raster.js で描き、画面と保存した GIF の見た目を一致させる。
 const pv = $('preview');
 const pvLayout = layout({ dot: 16 });
 pv.width = pvLayout.width; pv.height = pvLayout.height;
 const pvCtx = pv.getContext('2d');
 const pvImage = pvCtx.createImageData(pv.width, pv.height);
-// 点滅と枠アニメが 1 段進む間隔（ミリ秒）。led-name-badge と同じ
-const EFFECT_TICK = 100;
 let timer = null;
 
 function drawFrame(grid) {
@@ -195,6 +201,55 @@ function restartPreview() {
   step();
   timer = setInterval(step, Math.min(interval, EFFECT_TICK));
 }
+
+// ---------- GIF ----------
+// GIF はプレビューと同じ raster.js で描き、コマは animation.js がプレビューと同じ時刻の画面を作る。
+// 作るのは数百ミリ秒〜1 秒ほどなので、Web Worker は使わず同期で作る
+// （この後に加える共有の処理が、クリックの直後（ユーザーの操作中）でないとブラウザに止められるため）。
+function makeGif() {
+  const lay = layout({ dot: state.dot, shape: state.shape });
+  const frames = buildFrames(state);
+  const writer = new GifWriter({ width: lay.width, height: lay.height, palette: palette(state.color, state.brightness) });
+  for (const f of frames) writer.addFrame(rasterize(f.grid, lay), f.delay);
+  const bytes = writer.finish();
+  const seconds = frames.reduce((n, f) => n + f.delay, 0) / 100;
+  return {
+    file: new File([bytes], 'led-banner.gif', { type: 'image/gif' }),
+    summary: `${lay.width}×${lay.height}・${frames.length} コマ・${seconds.toFixed(1)} 秒・${formatBytes(bytes.length)}`,
+  };
+}
+const formatBytes = (n) => (n >= 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(1)} MB` : `${Math.ceil(n / 1024)} KB`);
+
+function setStatus(text, kind = '') {
+  const st = $('status');
+  st.textContent = text;
+  st.className = `status ${kind}`;
+}
+
+function download(file) {
+  const url = URL.createObjectURL(file);
+  const a = document.createElement('a');
+  a.href = url; a.download = file.name;
+  document.body.appendChild(a); a.click(); a.remove();
+  // すぐに解放すると、ブラウザによってはダウンロードが始まる前に URL が無効になるため、少し待つ
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
+
+// 失敗を画面に出す（GIF が作れないときに、ボタンを押しても何も起きないように見えないよう）。
+function guarded(fn) {
+  return async () => {
+    try { await fn(); } catch (e) {
+      console.error(e);
+      setStatus('エラー: ' + (e && e.message ? e.message : e), 'err');
+    }
+  };
+}
+
+$('saveGif').addEventListener('click', guarded(() => {
+  const gif = makeGif();
+  download(gif.file);
+  setStatus(`GIF を保存しました（${gif.summary}）`, 'ok');
+}));
 
 // テーマはバナーの設定とは別に保存する（state の検証に含めず、壊れても初期値に戻すだけで済むように）。
 const THEME_KEY = 'ledbanner.theme';

@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>LEDバナー — 電光掲示板風のLEDプレビュー</title>
-<meta name="description" content="LEDネームバッジ風の電光掲示板を作って眺められます。">
+<title>LEDバナー — 電光掲示板風のアニメGIFを作る</title>
+<meta name="description" content="LEDネームバッジ風の電光掲示板を作って、アニメーションGIFとして保存できます。">
 <link rel="stylesheet" href="style.css">
 <script>
   // 描画前にテーマを決めて、読み込み時に一瞬ダークで表示されるのを防ぐ（app.js はモジュールで後から読まれるため、ここに置く）。
@@ -19,7 +19,7 @@
 <header>
   <div>
     <h1>LEDバナー</h1>
-    <p class="sub">LEDネームバッジ風の電光掲示板を作って、眺められます。</p>
+    <p class="sub">LEDネームバッジ風の電光掲示板を作って、アニメーションGIFとして保存できます。</p>
   </div>
   <label class="theme">テーマ
     <select id="theme">
@@ -108,12 +108,35 @@
     </details>
   </section>
 
+  <section class="card">
+    <h2>GIF に保存</h2>
+    <div class="row">
+      <label>形
+        <select id="shape">
+          <option value="wide">16:9（上下に余白。SNS 向け）</option>
+          <option value="banner">バナーのみ</option>
+        </select>
+      </label>
+      <label>LED の大きさ
+        <select id="dot">
+          <option value="8">小（8px）</option>
+          <option value="12">中（12px）</option>
+          <option value="16">大（16px）</option>
+        </select>
+      </label>
+    </div>
+    <div class="row">
+      <button id="saveGif" class="primary">GIF を保存</button>
+    </div>
+    <p id="status" class="status" role="status"></p>
+  </section>
+
   <section class="card small">
     <h2>このページについて</h2>
     <ul>
       <li><a href="https://github.com/mitsuharu/led-name-badge" target="_blank" rel="noopener">LEDネームバッジ 書き換えツール</a>のプレビュー部分を主役にしたスピンオフです。表示モードの動きは書き換えツールと同じです。</li>
       <li>横 44 × 縦 11 ドットの <a href="https://www.shigezone.com/p/p916/" target="_blank" rel="noopener">LEDネームバッジ（Shigezone）</a>を模しています。</li>
-      <li>入力した文字や設定はこのブラウザ（localStorage）にだけ保存し、サーバーには送りません。</li>
+      <li>入力した文字や設定はこのブラウザ（localStorage）にだけ保存し、サーバーには送りません。GIF もこのブラウザの中で作ります。</li>
     </ul>
   </section>
 </main>
