@@ -4,7 +4,7 @@ import { ROWS, BADGE_WIDTH as BADGE_W, ANIMATION_FRAME_WIDTH, APPROXIMATE_MODES,
 import { COLORS, layout, palette, rasterize } from './raster.js';
 import { EFFECT_TICK, buildFrames } from './animation.js';
 import { GifWriter } from './gif.js';
-import { composePostText, xIntentUrl } from './share.js';
+import { composePostText } from './share.js';
 
 const STORE_KEY = 'ledbanner.v1';
 
@@ -206,7 +206,7 @@ function restartPreview() {
 
 // ---------- GIF ----------
 // GIF はプレビューと同じ raster.js で描き、コマは animation.js がプレビューと同じ時刻の画面を作る。
-// Web Worker で作らないのは、共有（navigator.share）や新しいタブを開く処理が、クリックの直後（ユーザーの操作中）でないと
+// Web Worker で作らないのは、共有（navigator.share）がクリックの直後（ユーザーの操作中）でないと
 // ブラウザに止められるため。作るのは数百ミリ秒〜1 秒ほどなので、同期で作る。
 function makeGif() {
   const lay = layout({ dot: state.dot });
@@ -254,13 +254,12 @@ $('saveGif').addEventListener('click', guarded(() => {
   setStatus(`GIF を保存しました（${gif.summary}）`, 'ok');
 }));
 
-// ---------- X / 共有 ----------
-// X の投稿画面の URL（Web Intent）では画像を渡せない。API で直接投稿するには、利用者の X アカウントの認可と
-// それを預かるサーバーが要り、「外部に送信しない・サーバーを持たない」方針に反するため採らない。
-// 代わりに、ファイルを共有できるブラウザでは共有シート（X のアプリを選べば GIF 付きで投稿画面になる）、
-// それ以外では GIF を保存してから投稿画面を開き、利用者に添付してもらう。
+// ---------- 共有 ----------
+// 主な使い道はスマートフォンなので、ファイルを共有できるブラウザでは「共有…」をメインのボタンにする。
+// 共有シートで X などのアプリを選べば、GIF を添付した状態で投稿画面になる。
+// X の投稿画面の URL（Web Intent）では画像を渡せず、保存してから手で添付してもらうしかないため、X 専用のボタンは置かない。
+// API で直接投稿するには利用者の X アカウントの認可を預かるサーバーが要り、「外部に送信しない」方針に反するので採らない。
 const postText = () => composePostText(state);
-const intentUrl = () => xIntentUrl(postText());
 
 // ファイルを共有できるかは GIF の中身ではなく種類で決まるため、小さなダミーで確かめてボタンを出し分ける。
 const canShareGif = (() => {
@@ -270,7 +269,9 @@ const canShareGif = (() => {
     return false;
   }
 })();
-$('shareFile').hidden = !canShareGif;
+['shareFile', 'shareOptions', 'shareNote'].forEach((id) => { $(id).hidden = !canShareGif; });
+// 共有できないブラウザでは保存がメインの操作になる
+$('saveGif').classList.toggle('primary', !canShareGif);
 
 $('shareFile').addEventListener('click', guarded(async () => {
   const gif = makeGif();
@@ -280,32 +281,12 @@ $('shareFile').addEventListener('click', guarded(async () => {
   } catch (e) {
     // 共有先のアプリで失敗したときも AbortError が返るブラウザがあるため、閉じただけと決めつけてメッセージを消さない
     if (e && e.name === 'AbortError') {
-      setStatus('共有は完了しませんでした（取り消したか、共有先でエラーになった可能性があります）。うまくいかないときは「X に投稿」を使ってください。');
+      setStatus('共有は完了しませんでした（取り消したか、共有先でエラーになった可能性があります）。うまくいかないときは「GIF を保存」して、投稿するアプリで添付してください。');
       return;
     }
     throw e;
   }
 }));
-
-// 「X に投稿」は window.open ではなく普通のリンクにする。
-// スクリプトで開くタブは、広告ブロッカーのポップアップ対策に止められることがあるため（他のサイトの投稿ボタンと同じ形にする）。
-// クリックでは GIF の保存だけをし、タブはリンクの既定の動作で開く。
-const postLink = $('postX');
-postLink.addEventListener('pointerdown', () => { postLink.href = intentUrl(); });
-postLink.addEventListener('focus', () => { postLink.href = intentUrl(); });
-postLink.addEventListener('click', (e) => {
-  postLink.href = intentUrl();
-  try {
-    const gif = makeGif();
-    download(gif.file);
-    setStatus(`GIF を保存しました（${gif.summary}）。開いた X の投稿画面で、保存した GIF（${gif.file.name}）を添付してください。`, 'ok');
-  } catch (err) {
-    // GIF が作れないまま投稿画面だけ開くと、添付するものがなく戸惑うため、開かずにエラーを出す
-    e.preventDefault();
-    console.error(err);
-    setStatus('エラー: ' + (err && err.message ? err.message : err), 'err');
-  }
-});
 
 // テーマはバナーの設定とは別に保存する（state の検証に含めず、壊れても初期値に戻すだけで済むように）。
 const THEME_KEY = 'ledbanner.theme';
